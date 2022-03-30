@@ -12,15 +12,54 @@ from pdf2image import convert_from_path
 
 sourceDir = r'\\mryflash\TempDecStore\iPub_Support'
 
+dateTodaySource = date.today().strftime("%m%d%Y")
+dateTodaySource = '03292022'
+
+dateTodayDest = date.today().strftime("%Y%m%d")
+dateTodayDest = "20220329"
+
+destDir = r'\\mryflash\renocsc$\Notices\A_Notices_for_CS'
+destDir = os.path.join(destDir,dateTodayDest)
+
+
+
 poppler_path = os.path.join(os.path.dirname(__file__), 'poppler-0.68.0_x86/bin')
 custom_config = r'--oem 3 --psm 6'
 
+copyConvertTitle = '----------- COPY/CONVERT ----------'
+errorMsgType = 'ERROR'
 
 
+
+
+
+            
+def convert_pdf(src_path, dst_path):
+    cmd = "gpcl6win64.exe -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=%s %s" % (dst_path, src_path)
+    os.system(cmd)
+
+def run(): 
+    global errorLog 
+    errorLog = None
+
+    global runningLog 
+    runningLog = None
+    #check destination directory 
+    if not os.path.isdir(destDir):
+        log('Destination Directory: '+destDir+' does not exist - Shutting down', type = errorMsgType)
+        quit()
+
+    log('Program Start')
+    pclToPdf()
+    filterRename() 
+
+
+def deleteFile(filePath):
+    if os.path.exists(filePath):
+        os.remove(filePath)
 
 def processDestDir(top):
-    if not os.path.isdir(top):
-        exit(1)
+    
     for fileName in os.listdir(top):
         filePath = os.path.join(top, fileName)
         if not os.path.isfile(filePath):
@@ -28,97 +67,98 @@ def processDestDir(top):
         if not fileName.endswith('.pdf'):
             continue
         yield (top, fileName)
-            
-def convert_pdf(src_path, dst_path):
-    cmd = "gpcl6win64.exe -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=%s %s" % (dst_path, src_path)
-    os.system(cmd)
 
-# copies pdf versions from source to dest directories
-def pclToPdf(destDir):              
-    
-    i = 0
-    for filePath in filePaths():
-        
-        destPathTemp = os.path.join(destDir, os.path.basename(filePath).replace(".pcl",".pdf"))
-        i = i + 1
-        print(str(i)+": "+filePath.strip()+" -> "+destPathTemp.strip())
-        convert_pdf(filePath.strip(), destPathTemp.strip())
-        print("done.")
+def filterRename():
 
-def run(dateTodayDest): 
-    destDir = r'\\mryflash\renocsc$\Notices\A_Notices_for_CS'
-    destDir = os.path.join(destDir,dateTodayDest)
-    pclToPdf(destDir)
-    filterRename(destDir)
-
-def deleteFile(filePath):
-    if os.path.exists(filePath):
-        os.remove(filePath)
-
-def filterRename(destDir):
+    log('Filtering/Renaming: '+destDir+' ---------------------------------------')
 
     for (folder, name) in processDestDir(destDir):
 
-        filePath = os.path.join(folder,name)
-        pages = convert_from_path(filePath, dpi=350, poppler_path=poppler_path)
-        firstPageText = pytesseract.image_to_string(pages[0], config=custom_config)
-        print("\n")
-        print("Checking   ", name)
+        try:
+            filePath = os.path.join(folder,name)
+            pages = convert_from_path(filePath, dpi=350, poppler_path=poppler_path)
+            firstPageText = pytesseract.image_to_string(pages[0], config=custom_config)
+            
 
-        if(firstPageText.find("Company Copy") != -1):
-            print("Company Copy Deleted")
-            deleteFile(filePath)
-        elif not "Affidavit" in name:
-            binderNbrLeadingIndex = firstPageText.find("Binder Number: ")
-            if binderNbrLeadingIndex != -1:
-                binderNbrLeadingIndex = binderNbrLeadingIndex + 15
-                binderNbrTrailingIndex = firstPageText.find("\n",binderNbrLeadingIndex, len(firstPageText))
+            if(firstPageText.find("Company Copy") != -1):
+                log('Deleted - company copy: '+name)
+                deleteFile(filePath)
+            elif not "Affidavit" in name:
+                binderNbrLeadingIndex = firstPageText.find("Binder Number: ")
+                if binderNbrLeadingIndex != -1:
+                    binderNbrLeadingIndex = binderNbrLeadingIndex + 15
+                    binderNbrTrailingIndex = firstPageText.find("\n",binderNbrLeadingIndex, len(firstPageText))
 
-                binderNbr = firstPageText[binderNbrLeadingIndex:binderNbrTrailingIndex]
+                    binderNbr = firstPageText[binderNbrLeadingIndex:binderNbrTrailingIndex]
 
-                if(firstPageText.find("Agent Copy") != -1):
-                    newName = os.path.join(destDir, binderNbr+"_A.pdf") 
-                else:
-                    newName = os.path.join(destDir, binderNbr+"_I.pdf") 
-                print("Renamed To ", os.path.basename(newName))
-                os.rename(filePath, newName )
+                    if(firstPageText.find("Agent Copy") != -1):
+                        newName = os.path.join(destDir, binderNbr+"_A.pdf") 
+                    else:
+                        newName = os.path.join(destDir, binderNbr+"_I.pdf") 
+                    
 
-            policyNbrLeadingIndex = firstPageText.find("Policy Number: ") 
-            if policyNbrLeadingIndex != -1:
-                policyNbrLeadingIndex = policyNbrLeadingIndex + 15
-                policyNbrTrailingIndex = firstPageText.find("\n",policyNbrLeadingIndex, len(firstPageText))
-                
-                plcyNbr = firstPageText[policyNbrLeadingIndex:policyNbrTrailingIndex]
+                policyNbrLeadingIndex = firstPageText.find("Policy Number: ") 
+                if policyNbrLeadingIndex != -1:
+                    policyNbrLeadingIndex = policyNbrLeadingIndex + 15
+                    policyNbrTrailingIndex = firstPageText.find("\n",policyNbrLeadingIndex, len(firstPageText))
+                    
+                    plcyNbr = firstPageText[policyNbrLeadingIndex:policyNbrTrailingIndex]
 
-                if(firstPageText.find("Agent Copy") != -1):
-                    newName = os.path.join(destDir, plcyNbr+"_A.pdf") 
-                else:
-                   newName =  os.path.join(destDir, plcyNbr+"_I.pdf") 
-                print("Renamed To ", os.path.basename(newName))
+                    if(firstPageText.find("Agent Copy") != -1):
+                        newName = os.path.join(destDir, plcyNbr+"_A.pdf") 
+                    else:
+                        newName =  os.path.join(destDir, plcyNbr+"_I.pdf") 
+
                 os.rename(filePath, newName)
+                log('Rename Successful: '+name+"   ->   "+ os.path.basename(newName))
+        except Exception as ex:
+            log('Rename Failed: '+name+'\n\tMessage:\n\t'+str(ex), type = errorMsgType)
         
 # Finds today's file paths and returns them as a generator
 def filePaths():
+    try:
+        
+        dirList = os.listdir(sourceDir)
+        
 
-    dirList = os.listdir(sourceDir)
-    dateTodaySource = date.today().strftime("%m%d%Y")
+        # find directories marked with today's date that contain a Notices folder
+        targetDirectory = [dir for dir in dirList if dateTodaySource == dir[:8] and  "Notices" in os.listdir(os.path.join(sourceDir,dir))]
 
-    # find directories marked with today's date that contain a Notices folder
-    targetDirectory = [dir for dir in dirList if dateTodaySource == dir[:8] and  "Notices" in os.listdir(os.path.join(sourceDir,dir))]
+        #this shouldn't happen, throw error
+        if len(targetDirectory) == 0:
+            raise NameError('Source directory: ' + os.path.join(sourceDir,dateTodaySource) + ' does not exist - Shutting down')
+        elif len(targetDirectory) > 1:
+            raise NameError('Multiple Source Directories found: '+', '.join(targetDirectory)+' - Shutting down')
 
-    #this shouldn't happen, throw error
-    if len(targetDirectory) != 1:
-        #throw error
-        something = "something"
+        batFile = os.path.join(sourceDir, targetDirectory[0], "Notices", "PrintNotices"+targetDirectory[0]+".bat")
 
+        for line in open(batFile, 'r'):
+            words = line.split(' ')
+            filePath = words[-1]
+            if "0_CIG_0" in filePath or "Affidavit" in filePath: 
+                yield(filePath)
 
-    batFile = os.path.join(sourceDir, targetDirectory[0], "Notices", "PrintNotices"+targetDirectory[0]+".bat")
+    except NameError as ex:
+        log(ex, type = errorMsgType)
+        quit()
+    except OSError as ex:
+        log('Could not open source file: ' + batFile + ' - Shutting down', type = errorMsgType)
+        quit()
 
-    for line in open(batFile, 'r'):
-        words = line.split(' ')
-        filePath = words[-1]
-        if "0_CIG_0" in filePath or "Affidavit" in filePath: 
-            yield(filePath)
+# copies pdf versions from source to dest directories
+def pclToPdf():              
+
+    log(copyConvertTitle)
+    for filePath in filePaths():
+        
+        destPathTemp = os.path.join(destDir, os.path.basename(filePath).replace(".pcl",".pdf"))
+        conversionMessage = filePath.strip()+"  ->  "+destPathTemp.strip()
+
+        try:
+            convert_pdf(filePath.strip(), destPathTemp.strip())
+            log('Conversion Successful: '+conversionMessage)
+        except Exception as ex:
+            log('Conversion failed: '+conversionMessage+'\n\tMessage:\n\t'+str(ex), type = errorMsgType)
 
 def setup_logger(name, log_file):
     """To setup as many loggers as you want"""
@@ -132,28 +172,45 @@ def setup_logger(name, log_file):
 
     return logger    
 
-#fetch today's date for destination folder
-dateTodayDest = date.today().strftime("%Y%m%d")
 
-logDir = os.path.join(os.getcwd(),'logs')
-if not os.path.exists(logDir):
-    os.mkdir(logDir)
-    
-# Create today's error log
-errorLogDir = os.path.join(os.getcwd(),'logs','errorLogs')
-if not os.path.exists(errorLogDir):
-    os.mkdir(errorLogDir)
-errorLogPath = os.path.join(errorLogDir,'error_' + dateTodayDest + '.log' )
-errorLog = setup_logger('errorLog',errorLogPath)
 
-# Create today's running log
-runningLogDir = os.path.join(os.getcwd(),'logs','runningLogs')
-if not os.path.exists(runningLogDir):
-    os.mkdir(runningLogDir)
-runningLogPath = os.path.join(runningLogDir,'run_' + dateTodayDest + '.log')
-runningLog = setup_logger('runningLog',runningLogPath)
+def log(msg, type = None):
+    global errorLog
+    global runningLog
+    # INITIALIZE LOGGERS -----------------------------------------------
+    logDir = os.path.join(os.getcwd(),'logs')
+    if not os.path.exists(logDir):
+        os.mkdir(logDir)
 
-# run(dateTodayDest)
+    if type == errorMsgType:
+        if errorLog == None:
+            # Create today's error log
+            errorLogDir = os.path.join(os.getcwd(),'logs','errorLogs')
+            if not os.path.exists(errorLogDir):
+                os.mkdir(errorLogDir)
+            errorLogPath = os.path.join(errorLogDir,'error_' + dateTodayDest + '.log' )
+            errorLog = setup_logger('errorLog',errorLogPath)
+        errorLog.error(msg)
+        runningLog.error(msg)
+        print('ERROR - ',msg)
+    else:
+        if runningLog == None:
+            # Create today's running log
+            runningLogDir = os.path.join(os.getcwd(),'logs','runningLogs')
+            if not os.path.exists(runningLogDir):
+                os.mkdir(runningLogDir)
+            runningLogPath = os.path.join(runningLogDir,'run_' + dateTodayDest + '.log')
+            runningLog = setup_logger('runningLog',runningLogPath)
+        runningLog.info(msg)
+        print(msg)
+
+
+
+
+
+
+
+run()
 
 
 
