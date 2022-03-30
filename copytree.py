@@ -135,6 +135,10 @@ def setup_logger(name, log_file):
 #fetch today's date for destination folder
 dateTodayDest = date.today().strftime("%Y%m%d")
 
+logDir = os.path.join(os.getcwd(),'logs')
+if not os.path.exists(logDir):
+    os.mkdir(logDir)
+    
 # Create today's error log
 errorLogDir = os.path.join(os.getcwd(),'logs','errorLogs')
 if not os.path.exists(errorLogDir):
