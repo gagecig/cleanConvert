@@ -13,10 +13,10 @@ from pdf2image import convert_from_path
 sourceDir = r'\\mryflash\TempDecStore\iPub_Support'
 
 dateTodaySource = date.today().strftime("%m%d%Y")
-dateTodaySource = '03292022'
+
 
 dateTodayDest = date.today().strftime("%Y%m%d")
-dateTodayDest = "20220329"
+
 
 destDir = r'\\mryflash\renocsc$\Notices\A_Notices_for_CS'
 destDir = os.path.join(destDir,dateTodayDest)
@@ -70,7 +70,7 @@ def processDestDir(top):
 
 def filterRename():
 
-    log('Filtering/Renaming: '+destDir+' ---------------------------------------')
+    log('\nFiltering/Renaming: '+destDir+' ---------------------------------------')
 
     for (folder, name) in processDestDir(destDir):
 
