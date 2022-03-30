@@ -9,8 +9,7 @@ from pdf2image import convert_from_path
 # 2. select interpreter C:\py\environments\autoPrint\Scripts\python.exe
 
 
-sourcePath = r'\\mryflash\TempDecStore\iPub_Support'
-destPath = r'\\mryflash\renocsc$\Notices\A_Notices_for_CS\gshawTemp'
+sourceDir = r'\\mryflash\TempDecStore\iPub_Support'
 
 poppler_path = os.path.join(os.path.dirname(__file__), 'poppler-0.68.0_x86/bin')
 custom_config = r'--oem 3 --psm 6'
@@ -33,61 +32,83 @@ def convert_pdf(src_path, dst_path):
 
 
 # copies pdf versions from source to dest directories
-def pclToPdf():              
+def pclToPdf(destDir):              
     
     i = 0
     for filePath in filePaths():
         
-        destPathTemp = os.path.join(destPath, os.path.basename(filePath).replace(".pcl",".pdf"))
+        destPathTemp = os.path.join(destDir, os.path.basename(filePath).replace(".pcl",".pdf"))
         i = i + 1
         print(str(i)+": "+filePath.strip()+" -> "+destPathTemp.strip())
         convert_pdf(filePath.strip(), destPathTemp.strip())
         print("done.")
 
 def run(): 
-    pclToPdf()
-    filterRename()
-    
+    destDir = r'\\mryflash\renocsc$\Notices\A_Notices_for_CS'
+    dateTodayDest = date.today().strftime("%Y%m%d")
+    destDir = os.path.join(destDir,dateTodayDest)
+    pclToPdf(destDir)
+    filterRename(destDir)
+
 
 def deleteFile(filePath):
     if os.path.exists(filePath):
         os.remove(filePath)
 
 
-def filterRename():
+def filterRename(destDir):
 
-    for (folder, name) in processDestDir(destPath):
+    for (folder, name) in processDestDir(destDir):
 
         filePath = os.path.join(folder,name)
         pages = convert_from_path(filePath, dpi=350, poppler_path=poppler_path)
         firstPageText = pytesseract.image_to_string(pages[0], config=custom_config)
+        print("\n")
+        print("Checking   ", name)
 
         if(firstPageText.find("Company Copy") != -1):
-            print("Delete Company Copy")
+            print("Company Copy Deleted")
             deleteFile(filePath)
         elif not "Affidavit" in name:
-            policyNbrLeadingIndex = firstPageText.find("Policy Number: ") + 15
+            binderNbrLeadingIndex = firstPageText.find("Binder Number: ")
+            if binderNbrLeadingIndex != -1:
+                binderNbrLeadingIndex = binderNbrLeadingIndex + 15
+                binderNbrTrailingIndex = firstPageText.find("\n",binderNbrLeadingIndex, len(firstPageText))
+
+                binderNbr = firstPageText[binderNbrLeadingIndex:binderNbrTrailingIndex]
+
+                if(firstPageText.find("Agent Copy") != -1):
+                    newName = os.path.join(destDir, binderNbr+"_A.pdf") 
+                else:
+                    newName = os.path.join(destDir, binderNbr+"_I.pdf") 
+                print("Renamed To ", os.path.basename(newName))
+                os.rename(filePath, newName )
+
+            policyNbrLeadingIndex = firstPageText.find("Policy Number: ") 
             if policyNbrLeadingIndex != -1:
+                policyNbrLeadingIndex = policyNbrLeadingIndex + 15
                 policyNbrTrailingIndex = firstPageText.find("\n",policyNbrLeadingIndex, len(firstPageText))
                 
                 plcyNbr = firstPageText[policyNbrLeadingIndex:policyNbrTrailingIndex]
 
                 if(firstPageText.find("Agent Copy") != -1):
-                    os.rename(filePath, os.path.join(destPath, plcyNbr+"_A.pdf") )
+                    newName = os.path.join(destDir, plcyNbr+"_A.pdf") 
                 else:
-                    os.rename(filePath, os.path.join(destPath, plcyNbr+"_I.pdf") )
-
+                   newName =  os.path.join(destDir, plcyNbr+"_I.pdf") 
+                print("Renamed To ", os.path.basename(newName))
+                os.rename(filePath, newName)
+        
 
 
 
 # Finds today's file paths and returns them as a generator
 def filePaths():
 
-    dirList = os.listdir(sourcePath)
-    dateToday = date.today().strftime("%m%d%Y")
+    dirList = os.listdir(sourceDir)
+    dateTodaySource = date.today().strftime("%m%d%Y")
 
     # find directories marked with today's date that contain a Notices folder
-    targetDirectory = [dir for dir in dirList if dateToday == dir[:8] and  "Notices" in os.listdir(os.path.join(sourcePath,dir))]
+    targetDirectory = [dir for dir in dirList if dateTodaySource == dir[:8] and  "Notices" in os.listdir(os.path.join(sourceDir,dir))]
 
     #this shouldn't happen, throw error
     if len(targetDirectory) != 1:
@@ -95,7 +116,7 @@ def filePaths():
         something = "something"
 
 
-    batFile = os.path.join(sourcePath, targetDirectory[0], "Notices", "PrintNotices"+targetDirectory[0]+".bat")
+    batFile = os.path.join(sourceDir, targetDirectory[0], "Notices", "PrintNotices"+targetDirectory[0]+".bat")
 
     for line in open(batFile, 'r'):
         words = line.split(' ')
