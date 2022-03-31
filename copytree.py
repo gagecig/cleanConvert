@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 import pytesseract
 from datetime import date
@@ -10,16 +11,8 @@ from pdf2image import convert_from_path
 # 2. select interpreter C:\py\environments\autoPrint\Scripts\python.exe
 
 
-sourceDir = r'\\mryflash\TempDecStore\iPub_Support'
-
-dateTodaySource = date.today().strftime("%m%d%Y")
 
 
-dateTodayDest = date.today().strftime("%Y%m%d")
-
-
-destDir = r'\\mryflash\renocsc$\Notices\A_Notices_for_CS'
-destDir = os.path.join(destDir,dateTodayDest)
 
 
 
@@ -44,6 +37,33 @@ def run():
 
     global runningLog 
     runningLog = None
+
+    global dateTodaySource 
+    dateTodaySource = date.today().strftime("%m%d%Y")
+
+    global dateTodayDest
+    dateTodayDest = date.today().strftime("%Y%m%d")
+
+    
+
+    # check command line args 
+    if len(sys.argv) > 2:
+        log('Too many arguments specified, only accepts target date in form mmddyyyy - Shutting down', type = errorMsgType)
+        print('len(sys.argv) two or: ',len(sys.argv) )
+        
+        quit()
+    elif len(sys.argv) == 2:
+        dateTodaySource = sys.argv[1]
+        dateTodayDest = dateTodaySource[4:]+dateTodaySource[:4]
+        log('Running for user specified date: '+ dateTodaySource)
+
+    global sourceDir
+    sourceDir = r'\\mryflash\TempDecStore\iPub_Support'
+
+    global destDir
+    destDir = r'\\mryflash\renocsc$\Notices\A_Notices_for_CS'
+    destDir = os.path.join(destDir,dateTodayDest)
+    
     #check destination directory 
     if not os.path.isdir(destDir):
         log('Destination Directory: '+destDir+' does not exist - Shutting down', type = errorMsgType)
@@ -69,6 +89,7 @@ def processDestDir(top):
         yield (top, fileName)
 
 def filterRename():
+    global destDir
 
     log('\nFiltering/Renaming: '+destDir+' ---------------------------------------')
 
@@ -116,6 +137,9 @@ def filterRename():
         
 # Finds today's file paths and returns them as a generator
 def filePaths():
+    global sourceDir
+    global dateTodaySource
+
     try:
         
         dirList = os.listdir(sourceDir)
@@ -147,6 +171,7 @@ def filePaths():
 
 # copies pdf versions from source to dest directories
 def pclToPdf():              
+    global destDir
 
     log(copyConvertTitle)
     for filePath in filePaths():
@@ -183,31 +208,37 @@ def log(msg, type = None):
         os.mkdir(logDir)
 
     if type == errorMsgType:
-        if errorLog == None:
-            # Create today's error log
-            errorLogDir = os.path.join(os.getcwd(),'logs','errorLogs')
-            if not os.path.exists(errorLogDir):
-                os.mkdir(errorLogDir)
-            errorLogPath = os.path.join(errorLogDir,'error_' + dateTodayDest + '.log' )
-            errorLog = setup_logger('errorLog',errorLogPath)
+        errorLogInit()
         errorLog.error(msg)
         runningLog.error(msg)
         print('ERROR - ',msg)
     else:
-        if runningLog == None:
-            # Create today's running log
-            runningLogDir = os.path.join(os.getcwd(),'logs','runningLogs')
-            if not os.path.exists(runningLogDir):
-                os.mkdir(runningLogDir)
-            runningLogPath = os.path.join(runningLogDir,'run_' + dateTodayDest + '.log')
-            runningLog = setup_logger('runningLog',runningLogPath)
+        runningLogInit()
         runningLog.info(msg)
         print(msg)
 
+def errorLogInit():
+    global errorLog
+    global dateTodayDest
+    if errorLog == None:
+        # Create today's error log
+        errorLogDir = os.path.join(os.getcwd(),'logs','errorLogs')
+        if not os.path.exists(errorLogDir):
+            os.mkdir(errorLogDir)
+        errorLogPath = os.path.join(errorLogDir,'error_' + dateTodayDest + '.log' )
+        errorLog = setup_logger('errorLog',errorLogPath)
+    runningLogInit()
 
-
-
-
+def runningLogInit():
+    global runningLog
+    global dateTodayDest
+    if runningLog == None:
+        # Create today's running log
+        runningLogDir = os.path.join(os.getcwd(),'logs','runningLogs')
+        if not os.path.exists(runningLogDir):
+            os.mkdir(runningLogDir)
+        runningLogPath = os.path.join(runningLogDir,'run_' + dateTodayDest + '.log')
+        runningLog = setup_logger('runningLog',runningLogPath)
 
 
 run()
