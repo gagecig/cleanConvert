@@ -51,7 +51,7 @@ def run():
         log('Too many arguments specified, only accepts target date in form mmddyyyy - Shutting down', type = errorMsgType)
         print('len(sys.argv) two or: ',len(sys.argv) )
         
-        quit()
+        sys.exit(0)
     elif len(sys.argv) == 2:
         dateTodaySource = sys.argv[1]
         dateTodayDest = dateTodaySource[4:]+dateTodaySource[:4]
@@ -67,7 +67,7 @@ def run():
     #check destination directory 
     if not os.path.isdir(destDir):
         log('Destination Directory: '+destDir+' does not exist - Shutting down', type = errorMsgType)
-        quit()
+        sys.exit(0)
 
     log('Program Start')
     pclToPdf()
@@ -164,10 +164,10 @@ def filePaths():
 
     except NameError as ex:
         log(ex, type = errorMsgType)
-        quit()
+        sys.exit(0)
     except OSError as ex:
         log('Could not open source file: ' + batFile + ' - Shutting down', type = errorMsgType)
-        quit()
+        sys.exit(0)
 
 # copies pdf versions from source to dest directories
 def pclToPdf():              
