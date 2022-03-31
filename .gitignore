@@ -1,4 +1,6 @@
 # ignore all logs
 *.log
 **/output
+*.pyc
+*.pyo
 ReadMe.txt
