@@ -56,6 +56,8 @@ def run():
         dateTodaySource = sys.argv[1]
         dateTodayDest = dateTodaySource[4:]+dateTodaySource[:4]
         log('Running for user specified date: '+ dateTodaySource)
+    else:
+        log('Running for todays date: '+ dateTodaySource )
 
     global sourceDir
     sourceDir = r'\\mryflash\TempDecStore\iPub_Support'
