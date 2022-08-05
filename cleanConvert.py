@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 import logging
 import pytesseract
@@ -23,13 +24,6 @@ copyConvertTitle = '----------- COPY/CONVERT ----------'
 errorMsgType = 'ERROR'
 
 
-
-
-
-            
-def convert_pdf(src_path, dst_path):
-    cmd = "gpcl6win64.exe -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=%s %s" % (dst_path, src_path)
-    os.system(cmd)
 
 def run(): 
     global errorLog 
@@ -178,14 +172,14 @@ def pclToPdf():
     log(copyConvertTitle)
     for filePath in filePaths():
         
-        destPathTemp = os.path.join(destDir, os.path.basename(filePath).replace(".pcl",".pdf"))
+        destPathTemp = os.path.join(destDir, os.path.basename(filePath))
         conversionMessage = filePath.strip()+"  ->  "+destPathTemp.strip()
 
         try:
-            convert_pdf(filePath.strip(), destPathTemp.strip())
-            log('Conversion Successful: '+conversionMessage)
+            shutil.copyfile(filePath.strip(), destPathTemp.strip())
+            log('Copy Successful: '+conversionMessage)
         except Exception as ex:
-            log('Conversion failed: '+conversionMessage+'\n\tMessage:\n\t'+str(ex), type = errorMsgType)
+            log('Copy failed: '+conversionMessage+'\n\tMessage:\n\t'+str(ex), type = errorMsgType)
 
 def setup_logger(name, log_file):
     """To setup as many loggers as you want"""
@@ -198,8 +192,6 @@ def setup_logger(name, log_file):
     logger.addHandler(handler)
 
     return logger    
-
-
 
 def log(msg, type = None):
     global errorLog
