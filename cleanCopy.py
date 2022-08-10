@@ -155,7 +155,7 @@ def filePaths():
         for line in open(batFile, 'r'):
             words = line.split(' ')
             filePath = words[-1]
-            if "0_CIG_0" in filePath or "Affidavit" in filePath: 
+            if ("0_CIG_0" in filePath or "Affidavit" in filePath) and ".pdf" in filePath: 
                 yield(filePath)
 
     except NameError as ex:
